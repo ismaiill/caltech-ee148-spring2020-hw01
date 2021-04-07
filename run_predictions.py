@@ -2,7 +2,7 @@ import os
 import numpy as np
 import json
 from PIL import Image
-
+np.seterr(divide='ignore', invalid='ignore')
 def detect_red_light(I):
     '''
     This function takes a numpy array <I> and returns a list <bounding_boxes>.
@@ -29,22 +29,27 @@ def detect_red_light(I):
     As an example, here's code that generates between 1 and 5 random boxes
     of fixed size and returns the results in the proper format.
     '''
-    
-    box_height = 8
-    box_width = 6
-    
-    num_boxes = np.random.randint(1,5) 
-    
-    for i in range(num_boxes):
-        (n_rows,n_cols,n_channels) = np.shape(I)
-        
-        tl_row = np.random.randint(n_rows - box_height)
-        tl_col = np.random.randint(n_cols - box_width)
-        br_row = tl_row + box_height
-        br_col = tl_col + box_width
-        
-        bounding_boxes.append([tl_row,tl_col,br_row,br_col]) 
-    
+    # precision
+    N=20
+    # load kernel
+    K = Image.open("kernel.jpg")
+    K=K.resize((int(640/N),int(480/N)))
+    K = np.asarray(K)
+    K=K[:,:,:3]
+    (K_n_rows,K_n_cols,K_n_channels) = np.shape(K)
+    for i in range(19):
+        for j in range(19):
+            if np.shape(I)==(480,640,3):
+                subimage = I[int(480/N)*i:int(480/N)*i+K_n_rows,int(640/N)*j:int(640/N)*j+K_n_cols]
+                v_1 = np.matrix(subimage.ravel())
+                v_2 = np.matrix(K.ravel())
+                normalizedv_1 = v_1/np.linalg.norm(v_1)
+                normalizedv_2 = v_2/np.linalg.norm(v_2)
+                inner = np.inner(normalizedv_1, normalizedv_2)
+                if inner> 0.75:
+                     bounding_boxes.append([int(480/N),int(640/N),int(480/N)*i+K_n_rows,int(640/N)*j+K_n_cols])
+              
+  
     '''
     END YOUR CODE
     '''
@@ -55,10 +60,10 @@ def detect_red_light(I):
     return bounding_boxes
 
 # set the path to the downloaded data: 
-data_path = '/Users/Ismail\ 1/Documents/Github/Computer\ Vision/RedLights2011_Medium '
+data_path = '/Users/Ismail/Documents/Github/ComputerVision/RedLights2011_Medium'
 
 # set a path for saving predictions: 
-preds_path = '../data/hw01_preds' 
+preds_path = '/Users/Ismail/Documents/Github/ComputerVision/HW1_preds' 
 os.makedirs(preds_path,exist_ok=True) # create directory if needed 
 
 # get sorted list of files: 
@@ -75,7 +80,6 @@ for i in range(len(file_names)):
     
     # convert to numpy array:
     I = np.asarray(I)
-    
     preds[file_names[i]] = detect_red_light(I)
 
 # save preds (overwrites any previous predictions!)
